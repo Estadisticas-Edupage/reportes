@@ -8,7 +8,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1565C0 0%, #0D47A1 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -21,38 +21,52 @@
             padding: 40px;
             max-width: 600px;
             width: 100%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            border: 1px solid #E0E0E0;
         }
         h1 { 
-            color: #333; 
+            color: #0D47A1;
             margin-bottom: 10px;
             text-align: center;
+            font-size: 32px;
         }
         .subtitle {
-            color: #666;
+            color: #616161;
             text-align: center;
             margin-bottom: 30px;
+            font-size: 16px;
         }
         .btn {
             display: block;
             padding: 20px;
             margin: 15px 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
             color: white;
             text-decoration: none;
             text-align: center;
             border-radius: 10px;
             font-size: 16px;
-            transition: transform 0.3s;
+            transition: all 0.3s;
+            border: 2px solid transparent;
         }
-        .btn:hover { transform: translateY(-2px); }
+        .btn:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(25, 118, 210, 0.3);
+            border: 2px solid #1976D2;
+        }
         .info {
-            background: #f0f0f0;
+            background: #F5F5F5;
             padding: 15px;
             border-radius: 10px;
             margin-top: 30px;
             font-size: 14px;
-            color: #555;
+            color: #424242;
+            border-left: 4px solid #1976D2;
+        }
+        .new-window-icon {
+            font-size: 12px;
+            margin-left: 5px;
+            opacity: 0.8;
         }
     </style>
 </head>
@@ -61,12 +75,14 @@
         <h1>📊 Módulos Estadísticos Edupage</h1>
         <p class="subtitle">Sistema de Análisis para Colegios Colombianos</p>
         
-        <a href="sistemaestadisticasasignaturas1.html" class="btn">
+        <a href="sistemaestadisticasasignaturas1.html" target="_blank" class="btn">
             📚 Estadísticas por Asignatura
+            <span class="new-window-icon">↗️</span>
         </a>
         
-        <a href="estadisticasdesempeños.HTML" class="btn">
+        <a href="estadisticasdesempeños.HTML" target="_blank" class="btn">
             📉 Estadísticas por Desempeños
+            <span class="new-window-icon">↗️</span>
         </a>
         
         <div class="info">
@@ -74,7 +90,8 @@
             • Los datos se procesan localmente en su navegador<br>
             • No se almacena información en servidores<br>
             • Compatible con exportaciones Excel de Edupage<br>
-            • Desarrollado para Edupage Colombia
+            • Desarrollado para Edupage Colombia<br>
+            • <em>Los módulos se abren en una nueva pestaña</em>
         </div>
     </div>
 </body>
