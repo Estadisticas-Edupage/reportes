@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sistema de Análisis Académico - Versión Mejorada</title>
+  <title>Sistema de Análisis Académico - Asignaturas - Versión Mejorada</title>
   <!-- Librerías -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -13,7 +13,15 @@
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background: #E0E0E0;min-height:100vh;padding:20px}
     .container{max-width:1400px;margin:0 auto;background:#fff;border-radius:15px;box-shadow:0 20px 40px rgba(0,0,0,.2);overflow:hidden}
-    .header{background:linear-gradient(135deg,#60a5fa 0%,#3b82f6 100%);color:#fff;padding:30px;text-align:center}
+    .header{background: linear-gradient(135deg, #1874D0 0%, #1873CF 100%);color:#fff;padding:30px;text-align:center;position:relative;overflow:hidden}
+    .header::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle,rgba(255,255,255,0.1) 0%,transparent 70%);animation:pulse 4s ease-in-out infinite}
+    @keyframes pulse{0%,100%{transform:scale(1);opacity:0.5}50%{transform:scale(1.1);opacity:0.8}}
+    .header-inner{position:relative;z-index:1}
+    .school-line{display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:25px;padding:15px;background:rgba(255,255,255,0.15);border-radius:12px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.2)}
+    #schoolLogo{width:60px;height:60px;object-fit:contain;border-radius:8px;background:white;padding:5px;box-shadow:0 4px 12px rgba(0,0,0,0.2)}
+    #schoolHeaderName{font-size:28px;font-weight:700;text-transform:uppercase;letter-spacing:2px;text-shadow:2px 2px 4px rgba(0,0,0,0.3)}
+    .system-title{font-size:24px;font-weight:400;margin:20px 0 10px;opacity:0.95;border-top:1px solid rgba(255,255,255,0.3);padding-top:20px}
+    .system-subtitle{font-size:14px;opacity:0.85;margin-bottom:20px;font-style:italic}
     .filters-section{background:#f7f9fc;padding:20px;border-bottom:2px solid #e2e8f0}
     .filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px}
     .filter-item{display:flex;flex-direction:column;gap:5px}
@@ -138,10 +146,23 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>📊 Sistema de Análisis Académico</h1>
-      <p>Análisis completo con rangos configurables y estadísticas avanzadas</p>
-      <button class="btn btn-info" onclick="showTutorial()" style="margin-top:15px">📘 VER TUTORIAL COMPLETO</button>
+  <div class="header-inner">
+    
+    <!-- Logo + nombre del colegio -->
+    <div class="school-line">
+      <img id="schoolLogo" src="" alt="Escudo">
+      <span id="schoolHeaderName">Nombre del Colegio</span>
     </div>
+    
+    <!-- Título del sistema -->
+    <h1 class="system-title">📊 Sistema de Análisis Académico - Asignaturas</h1>
+    <p class="system-subtitle">Análisis completo con rangos configurables y estadísticas avanzadas</p>
+    
+    <!-- Botón -->
+    <button class="btn btn-info" onclick="showTutorial()">📘 VER TUTORIAL COMPLETO</button>
+  </div>
+</div>
+
 
     <!-- Configuración -->
     <div class="config-section">
@@ -190,7 +211,8 @@
       <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-top:8px;width:100%">
         <div class="filter-item" style="min-width:220px">
           <label>Nombre del colegio</label>
-          <input id="schoolName" placeholder="Ej. Olaya Herrera" />
+          <input type="text" id="schoolName" placeholder="Nombre del Colegio">
+          <input type="file" id="logoInput" accept="image/*">
         </div>
         <div class="filter-item">
           <label>Escala visible (máximo)</label>
@@ -3322,8 +3344,87 @@
     function resetAnalysis(){ 
       if(confirm('¿Desea realizar un nuevo análisis?')) location.reload(); 
     }
+</script>
+
+<!-- Script de nombre y logo del colegio -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const input = document.getElementById("schoolName");
+  const headerName = document.getElementById("schoolHeaderName");
+  const logoInput = document.getElementById("logoInput");
+  const logo = document.getElementById("schoolLogo");
+
+  // Actualizar nombre arriba
+  input.addEventListener("input", () => {
+    headerName.textContent = input.value.trim();
+    localStorage.setItem("schoolName", input.value.trim());
+  });
+
+  // Actualizar logo arriba
+  logoInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      logo.src = ev.target.result;
+      logo.style.display = "block";
+      localStorage.setItem("schoolLogo", ev.target.result);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Restaurar si ya está guardado
+  const savedName = localStorage.getItem("schoolName");
+  if (savedName) {
+    input.value = savedName;
+    headerName.textContent = savedName;
+  }
+  const savedLogo = localStorage.getItem("schoolLogo");
+  if (savedLogo) {
+    logo.src = savedLogo;
+    logo.style.display = "block";
+  }
+});
+</script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const input = document.getElementById("schoolName");
+    const headerName = document.getElementById("schoolHeaderName");
+    const logoInput = document.getElementById("logoInput");
+    const logo = document.getElementById("schoolLogo");
+
+    // Actualizar nombre arriba
+    input.addEventListener("input", () => {
+      headerName.textContent = input.value.trim();
+      localStorage.setItem("schoolName", input.value.trim());
+    });
+
+    // Actualizar logo arriba
+    logoInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        logo.src = ev.target.result;
+        logo.style.display = "block";
+        localStorage.setItem("schoolLogo", ev.target.result);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Restaurar si ya está guardado
+    const savedName = localStorage.getItem("schoolName");
+    if (savedName) {
+      input.value = savedName;
+      headerName.textContent = savedName;
+    }
+    const savedLogo = localStorage.getItem("schoolLogo");
+    if (savedLogo) {
+      logo.src = savedLogo;
+      logo.style.display = "block";
+    }
+  });
   </script>
+
 </body>
-
 </html>
-
