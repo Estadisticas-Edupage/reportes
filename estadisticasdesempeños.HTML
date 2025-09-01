@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #E0E0E0; /* Fondo gris claro */
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             color: #333;
         }
@@ -665,6 +665,71 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style id="tema-azul-override">
+  :root{
+    --blue-dark:#0D47A1;
+    --blue:#1976D2;
+    --blue-deep:#1565C0;
+    --text:#424242;
+    --text-muted:#616161;
+    --bg:#F5F5F5;
+    --container:#FFFFFF;
+    --border:#E0E0E0;
+    --row-alt:#FAFAFA;
+  }
+  /* Fondo general y tipografía */
+  body{background:var(--bg) !important;color:var(--text) !important;}
+  /* Contenedores y tarjetas */
+  .header,.upload-section,.tabs-container,.chart-container,.table-container,.student-summary-card{
+    background:var(--container) !important;
+    border:1px solid var(--border) !important;
+    box-shadow:none !important;
+  }
+  .school-name{color:var(--blue-dark) !important;}
+  .school-subtitle{color:var(--text-muted) !important;}
+  .logo-container{border-color:var(--blue) !important;background:var(--bg) !important;}
+  /* Inputs y filtros */
+  .filters-container{background:var(--bg) !important;border:1px solid var(--border) !important;}
+  .filter-group label{color:var(--text-muted) !important;}
+  .school-info-inputs input,.filter-group select,.filter-group input{
+    border-color:var(--border) !important;color:var(--text) !important;background:#fff !important;
+  }
+  .school-info-inputs input:focus,.filter-group select:focus,.filter-group input:focus{
+    border-color:var(--blue) !important;box-shadow:0 0 0 3px rgba(25,118,210,.12) !important;outline:none !important;
+  }
+  /* Tabs */
+  .tabs{border-bottom:3px solid var(--blue) !important;background:var(--bg) !important;}
+  .tab{color:var(--text-muted) !important;}
+  .tab:hover{background:rgba(25,118,210,.08) !important;color:var(--blue) !important;}
+  .tab.active{color:var(--blue-dark) !important;background:#fff !important;}
+  .tab.active::after{background:linear-gradient(135deg,var(--blue) 0%,var(--blue-deep) 100%) !important;}
+  /* Botones y etiquetas de carga */
+  .file-input-label,.btn-primary,.btn-success,.btn-info{
+    background:linear-gradient(135deg,var(--blue) 0%,var(--blue-deep) 100%) !important;
+    color:#fff !important;border:none !important;
+  }
+  .btn:hover{box-shadow:0 6px 18px rgba(13,71,161,.28) !important;transform:translateY(-1px) !important;}
+  /* Estadísticas / tarjetas destacadas */
+  .summary-stats-header{background:linear-gradient(135deg,var(--blue) 0%,var(--blue-deep) 100%) !important;}
+  .stat-card{background:linear-gradient(135deg,var(--blue) 0%,var(--blue-deep) 100%) !important;}
+  .stat-card h3,.stat-value,.stat-detail{color:#fff !important;}
+  /* Tablas */
+  thead{background:linear-gradient(135deg,var(--blue) 0%,var(--blue-deep) 100%) !important;color:#fff !important;}
+  tbody tr:nth-child(even){background:var(--row-alt) !important;}
+  tbody tr:hover{background:rgba(25,118,210,.06) !important;transform:none !important;}
+  th{color:#fff !important;}
+  td{color:var(--text) !important;}
+  /* Badges de desempeño (escala en azules) */
+  .desempeno-bajo{background:var(--blue-deep) !important;color:#fff !important;}
+  .desempeno-basico,.desempeno-básico{background:var(--blue) !important;color:#fff !important;}
+  .desempeno-alto{background:#42A5F5 !important;color:#0D47A1 !important;}
+  .desempeno-superior{background:#90CAF9 !important;color:#0D47A1 !important;}
+  /* Títulos secundarios */
+  .chart-title,.empty-state h3{color:var(--blue-dark) !important;}
+  /* Scrollbar */
+  ::-webkit-scrollbar-thumb{background:linear-gradient(135deg,var(--blue) 0%,var(--blue-deep) 100%) !important;}
+</style>
 </head>
 <body>
     <div class="container">
@@ -3439,5 +3504,4 @@
         });
     </script>
 </body>
-
 </html>
