@@ -1150,7 +1150,7 @@ button[onclick*="exportSoloBajoExcelFormatted"] { display:none !important; }
                     <button class="btn" id="btnExpGrupo" onclick="">📦 Excel (offline)</button>
                     <button class="btn" id="btnExpGrupoBajo" onclick="">📦 Solo BAJO (offline)</button>
                   
-                    <button class="btn" onclick="exportTodosGruposXlsx()">📘 Exportar Todos por Grupo (.xlsx)</button>
+                    <button class="btn" onclick="exportTodosGruposHybrid()">🌀 Exportar Todos por Grupo (auto .xlsx/.xml)</button>
 </div>
                   <div class="table-container" style="overflow:auto;">
                     <table id="tableGrupo">
@@ -4332,140 +4332,199 @@ function buildGrupoTabs(){
   };
 })();
 </script>
-
 <script>
-// ===== Exportar .XLSX multi-hoja con ExcelJS (requiere internet para cargar la librería) =====
-async function exportTodosGruposXlsx(){
-  if (typeof ExcelJS === 'undefined') {
-    alert('No se pudo cargar ExcelJS (requiere internet). Intenta de nuevo.');
-    return;
-  }
-  const groups = Array.isArray(grupos) ? grupos.slice().sort() : [];
-  if (!groups.length){ alert('No hay grupos para exportar.'); return; }
-
-  // Utilidades existentes del modo offline (orden P1-P3 y cálculo del modo)
+function _xmlEscape(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function _collectGroupSubjectsWithData(group){
   const P = _ordenarTrimestres_P123_off(trimestres);
-
-  // Helper: columnas con datos por grupo
-  function collectSubjectsWithData(group){
-    const subjects = Array.isArray(asignaturas)?asignaturas.slice():[];
-    const idx = {};
-    (allData||[]).forEach(d=>{
-      if(!d || d.grupo !== group) return;
-      const k = [d.estudiante,d.grupo,d.asignatura,d.trimestre].join('||');
-      (idx[k] = idx[k] || []).push(d.desempeno);
-    });
-    const has = new Set();
-    (allData||[]).forEach(d=>{
-      if(!d || d.grupo !== group || !d.asignatura) return;
-      P.forEach(tri=>{
-        const list = idx[[d.estudiante,group,d.asignatura,tri].join('||')] || [];
-        const v = _modo_off(list) || '-';
-        if (v && v !== '-') has.add(d.asignatura);
-      });
-    });
-    return (asignaturas||[]).filter(s => has.has(s));
-  }
-
-  // Helper: construir filas por grupo
-  function buildRows(group, subjects){
-    const idx = {};
-    (allData||[]).forEach(d=>{
-      if(!d || d.grupo !== group) return;
-      const k = [d.estudiante,d.grupo,d.asignatura,d.trimestre].join('||');
-      (idx[k] = idx[k] || []).push(d.desempeno);
-    });
-    const set = new Set();
-    (allData||[]).forEach(d=>{ if(d && d.grupo===group && d.estudiante){ set.add(d.estudiante); } });
-    const students = [...set].sort();
-
-    const bajasByStudent = {};
-    students.forEach(name=>{
-      let total = 0;
-      (subjects||[]).forEach(sub=>{
-        P.forEach(tri=>{
-          const list = idx[[name,group,sub,tri].join('||')] || [];
-          total += list.filter(v=>String(v).toUpperCase()==='BAJO').length;
-        });
-      });
-      bajasByStudent[name] = total;
-    });
-
-    const rows = [];
-    students.forEach(name=>{
-      P.forEach((tri,i)=>{
-        if(!tri) return;
-        const periodo = i===0?'P1':(i===1?'P2':'P3');
-        const vals = (subjects||[]).map(sub=>{
-          const list = idx[[name,group,sub,tri].join('||')] || [];
-          return _modo_off(list) || '-';
-        });
-        rows.push({ Estudiante:name, Grupo:group, Periodo:periodo, values:vals, TotalBajo:bajasByStudent[name]||0 });
-      });
-    });
-    return rows;
-  }
-
-  // Crear workbook
-  const wb = new ExcelJS.Workbook();
-
-  // Estilos base
-  function styleSheet(ws, columns){
-    // Encabezados
-    const header = ws.getRow(1);
-    header.font = { bold:true, size:8 };
-    header.eachCell((cell, colNum)=>{
-      if (columns[colNum-1] === 'Total BAJO'){
-        cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'E0E0E0'} };
-        cell.alignment = { horizontal:'center', vertical:'middle' };
-      }
-    });
-    // Anchos compactos
-    ws.columns = columns.map(k => ({ header:k, key:k, width: Math.min(Math.max(9, k.length+1), 14) }));
-    const lastRow = ws.rowCount, lastCol = columns.length;
-    for (let r=1;r<=lastRow;r++){
-      const row = ws.getRow(r);
-      for (let c=1;c<=lastCol;c++){
-        const cell = row.getCell(c);
-        cell.font = Object.assign({}, cell.font||{}, { size:8 });
-        cell.border = { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} };
-        if (columns[c-1] === 'Grupo'){
-          cell.alignment = { horizontal:'center', vertical:'middle' };
-        }
-        if (r>1 && c>3 && c<lastCol){
-          if ((cell.value||'').toString().toUpperCase() === 'BAJO'){
-            cell.font = Object.assign({}, cell.font||{}, { color:{argb:'FF0000'}, size:8 });
-          }
-        }
-      }
-    }
-    ws.views = [{ state:'frozen', ySplit:1 }];
-  }
-
-  // Construir hojas por grupo
-  groups.forEach(group=>{
-    const subjects = collectSubjectsWithData(group);
-    const rows = buildRows(group, subjects);
-    const columns = ['Estudiante','Grupo','Periodo', ...subjects, 'Total BAJO'];
-    const ws = wb.addWorksheet(String(group).substring(0,31)); // Excel sheet name limit
-    ws.columns = columns.map(k=>({ header:k, key:k }));
-    rows.forEach(r=>{
-      const obj = { Estudiante:r.Estudiante, Grupo:r.Grupo, Periodo:r.Periodo, 'Total BAJO': r.TotalBajo };
-      // Insertamos en orden: Estudiante, Grupo, Periodo, ...subjects..., Total BAJO
-      const rowArr = [r.Estudiante, r.Grupo, r.Periodo, ...r.values, r.TotalBajo];
-      ws.addRow(rowArr);
-    });
-    styleSheet(ws, columns);
+  const subjects = Array.isArray(asignaturas)?asignaturas.slice():[];
+  const idx = {};
+  (allData||[]).forEach(d=>{
+    if(!d || d.grupo !== group) return;
+    const k = [d.estudiante,d.grupo,d.asignatura,d.trimestre].join('||');
+    (idx[k] = idx[k] || []).push(d.desempeno);
   });
-
-  // Descargar .xlsx
-  const buf = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const hasData = new Set();
+  (allData||[]).forEach(d=>{
+    if(!d || d.grupo !== group) return;
+    if (!d.asignatura) return;
+    P.forEach(tri=>{
+      const list = idx[[d.estudiante,group,d.asignatura,tri].join('||')] || [];
+      const val = _modo_off(list) || '-';
+      if (val && val !== '-') hasData.add(d.asignatura);
+    });
+  });
+  return (asignaturas||[]).filter(s => hasData.has(s));
+}
+function _buildGroupRowsData(group, subjects){
+  const P = _ordenarTrimestres_P123_off(trimestres);
+  const idx = {};
+  (allData||[]).forEach(d=>{
+    if(!d || d.grupo !== group) return;
+    const k = [d.estudiante,d.grupo,d.asignatura,d.trimestre].join('||');
+    (idx[k] = idx[k] || []).push(d.desempeno);
+  });
+  const set = new Set();
+  (allData||[]).forEach(d=>{ if(d && d.grupo===group && d.estudiante){ set.add(d.estudiante); } });
+  const students = [...set].sort();
+  const bajasByStudent = {};
+  students.forEach(name=>{
+    let total = 0;
+    (asignaturas||[]).forEach(subj=>{
+      P.forEach(tri=>{
+        const list = idx[[name,group,subj,tri].join('||')] || [];
+        total += list.filter(v=>String(v).toUpperCase()==='BAJO').length;
+      });
+    });
+    bajasByStudent[name] = total;
+  });
+  const rows = [];
+  students.forEach(name=>{
+    P.forEach((tri,i)=>{
+      if(!tri) return;
+      const periodo = i===0?'P1':(i===1?'P2':'P3');
+      const vals = (asignaturas||[]).map(subj=>{
+        const list = idx[[name,group,subj,tri].join('||')] || [];
+        const val = _modo_off(list) || '-';
+        return val;
+      });
+      rows.push({ Estudiante:name, Grupo:group, Periodo:periodo, values:vals, TotalBajo: bajasByStudent[name]||0 });
+    });
+  });
+  return { rows, students };
+}
+function exportTodosGruposMultiSheet(){
+  const groups = Array.isArray(grupos)?grupos.slice().sort():[];
+  if(!groups.length){ alert("No hay grupos para exportar."); return; }
+  let xml = '';
+  xml += '<?xml version="1.0"?>';
+  xml += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" ';
+  xml += 'xmlns:o="urn:schemas-microsoft-com:office:office" ';
+  xml += 'xmlns:x="urn:schemas-microsoft-com:office:excel" ';
+  xml += 'xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">';
+  xml += '<Styles>';
+  xml += '<Style ss:ID="sNorm"><Font ss:Size="8"/><Borders>';
+  xml += '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>';
+  xml += '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>';
+  xml += '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>';
+  xml += '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>';
+  xml += '</Borders></Style>';
+  xml += '<Style ss:ID="sHeader"><Font ss:Bold="1" ss:Size="8"/></Style>';
+  xml += '<Style ss:ID="sHeaderGray"><Font ss:Bold="1" ss:Size="8"/><Interior ss:Color="#E0E0E0" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+  xml += '<Style ss:ID="sRed"><Font ss:Color="#FF0000" ss:Size="8"/><Borders>';
+  xml += '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>';
+  xml += '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>';
+  xml += '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>';
+  xml += '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>';
+  xml += '</Borders></Style>';
+  xml += '<Style ss:ID="sCenter"><Font ss:Size="8"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders>';
+  xml += '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>';
+  xml += '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>';
+  xml += '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>';
+  xml += '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>';
+  xml += '</Borders></Style>';
+  xml += '</Styles>';
+  groups.forEach(group=>{
+    const subjects = _collectGroupSubjectsWithData(group);
+    const { rows } = _buildGroupRowsData(group, subjects);
+    const columns = ['Estudiante','Grupo','Periodo', ...subjects, 'Total BAJO'];
+    xml += '<Worksheet ss:Name="'+_xmlEscape(group)+'"><Table>';
+    xml += '<Row>';
+    columns.forEach(col=>{
+      const style = (col==='Total BAJO') ? 'sHeaderGray' : 'sHeader';
+      xml += '<Cell ss:StyleID="'+style+'"><Data ss:Type="String">'+_xmlEscape(col)+'</Data></Cell>';
+    });
+    xml += '</Row>';
+    rows.forEach(r=>{
+      xml += '<Row>';
+      xml += '<Cell ss:StyleID="sNorm"><Data ss:Type="String">'+_xmlEscape(r.Estudiante)+'</Data></Cell>';
+      xml += '<Cell ss:StyleID="sCenter"><Data ss:Type="String">'+_xmlEscape(r.Grupo)+'</Data></Cell>';
+      xml += '<Cell ss:StyleID="sNorm"><Data ss:Type="String">'+_xmlEscape(r.Periodo)+'</Data></Cell>';
+      r.values.forEach(v=>{
+        const val = String(v||'');
+        const style = (val.toUpperCase()==='BAJO') ? 'sRed' : 'sNorm';
+        xml += '<Cell ss:StyleID="'+style+'"><Data ss:Type="String">'+_xmlEscape(val)+'</Data></Cell>';
+      });
+      xml += '<Cell ss:StyleID="sCenter"><Data ss:Type="Number">'+(r.TotalBajo||0)+'</Data></Cell>';
+      xml += '</Row>';
+    });
+    xml += '</Table></Worksheet>';
+  });
+  xml += '</Workbook>';
+  const blob = new Blob([xml], {type: "application/vnd.ms-excel"});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'Reporte_Grupos_MultiHoja.xlsx';
+  a.download = 'Reporte_Grupos_MultiHoja.xml';
   a.click(); URL.revokeObjectURL(a.href);
 }
-</script>
-</body>
+</script><script>
+function _loadExcelJSAndRun(cb){
+  const cdns=[
+    'https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js',
+    'https://unpkg.com/exceljs@4.3.0/dist/exceljs.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js'
+  ];
+  let i=0;
+  function next(){
+    if(i>=cdns.length){ cb(new Error('No se pudo cargar ExcelJS')); return; }
+    const s=document.createElement('script'); s.src=cdns[i++]; s.async=true;
+    s.onload=()=>cb(null,true); s.onerror=()=>next(); document.head.appendChild(s);
+  }
+  if(typeof ExcelJS!=='undefined'){ cb(null,true); } else { next(); }
+}
+async function _exportTodosGruposXlsxCore(){
+  const groups=Array.isArray(grupos)?grupos.slice().sort():[];
+  if(!groups.length){ alert('No hay grupos para exportar.'); return; }
+  const P=_ordenarTrimestres_P123_off(trimestres);
+  function collectSubjectsWithData(group){
+    const subjects=Array.isArray(asignaturas)?asignaturas.slice():[];
+    const idx={};
+    (allData||[]).forEach(d=>{ if(!d||d.grupo!==group)return; const k=[d.estudiante,d.grupo,d.asignatura,d.trimestre].join('||'); (idx[k]=idx[k]||[]).push(d.desempeno); });
+    const has=new Set();
+    (allData||[]).forEach(d=>{ if(!d||d.grupo!==group||!d.asignatura)return; P.forEach(tri=>{ const list=idx[[d.estudiante,group,d.asignatura,tri].join('||')]||[]; const v=_modo_off(list)||'-'; if(v&&v!=='-')has.add(d.asignatura); }); });
+    return (asignaturas||[]).filter(s=>has.has(s));
+  }
+  function buildRows(group, subjects){
+    const idx={};
+    (allData||[]).forEach(d=>{ if(!d||d.grupo!==group)return; const k=[d.estudiante,d.grupo,d.asignatura,d.trimestre].join('||'); (idx[k]=idx[k]||[]).push(d.desempeno); });
+    const set=new Set(); (allData||[]).forEach(d=>{ if(d&&d.grupo===group&&d.estudiante){ set.add(d.estudiante);} }); const students=[...set].sort();
+    const bajasByStudent={};
+    students.forEach(name=>{ let total=0; (subjects||[]).forEach(sub=>{ P.forEach(tri=>{ const list=idx[[name,group,sub,tri].join('||')]||[]; total+=list.filter(v=>String(v).toUpperCase()==='BAJO').length; }); }); bajasByStudent[name]=total; });
+    const rows=[]; students.forEach(name=>{ P.forEach((tri,i)=>{ if(!tri)return; const periodo=i===0?'P1':(i===1?'P2':'P3'); const vals=(subjects||[]).map(sub=>{ const list=idx[[name,group,sub,tri].join('||')]||[]; return _modo_off(list)||'-'; }); rows.push({Estudiante:name,Grupo:group,Periodo:periodo,values:vals,TotalBajo:bajasByStudent[name]||0}); }); });
+    return rows;
+  }
+  const wb=new ExcelJS.Workbook();
+  function styleSheet(ws,columns){
+    const header=ws.getRow(1); header.font={bold:true,size:8};
+    header.eachCell((cell,colNum)=>{ if(columns[colNum-1]==='Total BAJO'){ cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'E0E0E0'}}; cell.alignment={horizontal:'center',vertical:'middle'}; } });
+    ws.columns=columns.map(k=>({header:k,key:k,width:Math.min(Math.max(9,k.length+1),14)}));
+    const lastRow=ws.rowCount,lastCol=columns.length;
+    for(let r=1;r<=lastRow;r++){ const row=ws.getRow(r);
+      for(let c=1;c<=lastCol;c++){ const cell=row.getCell(c); cell.font=Object.assign({},cell.font||{},{size:8});
+        cell.border={top:{style:'thin'},left:{style:'thin'},bottom:{style:'thin'},right:{style:'thin'}};
+        if(columns[c-1]==='Grupo'){ cell.alignment={horizontal:'center',vertical:'middle'}; }
+        if(r>1 && c>3 && c<lastCol){ if((cell.value||'').toString().toUpperCase()==='BAJO'){ cell.font=Object.assign({},cell.font||{},{color:{argb:'FF0000'},size:8}); } }
+      }
+    }
+    ws.views=[{state:'frozen',ySplit:1}];
+  }
+  groups.forEach(group=>{
+    const subjects=collectSubjectsWithData(group);
+    const rows=buildRows(group,subjects);
+    const columns=['Estudiante','Grupo','Periodo',...subjects,'Total BAJO'];
+    const ws=wb.addWorksheet(String(group).substring(0,31));
+    ws.columns=columns.map(k=>({header:k,key:k}));
+    rows.forEach(r=>ws.addRow([r.Estudiante,r.Grupo,r.Periodo,...r.values,r.TotalBajo]));
+    styleSheet(ws,columns);
+  });
+  const buf=await wb.xlsx.writeBuffer();
+  const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='Reporte_Grupos_MultiHoja.xlsx'; a.click(); URL.revokeObjectURL(a.href);
+}
+function exportTodosGruposHybrid(){
+  _loadExcelJSAndRun(async (err)=>{
+    if(!err && typeof ExcelJS!=='undefined'){ try{ await _exportTodosGruposXlsxCore(); return; } catch(e){ console.warn('Fallo XLSX; usando XML',e); } }
+    try{ exportTodosGruposMultiSheet(); } catch(e){ alert('No fue posible exportar. Recarga e intenta de nuevo.'); }
+  });
+}
+</script></body>
 </html>
